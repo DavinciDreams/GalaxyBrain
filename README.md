@@ -1,8 +1,6 @@
 # Quivr - Your Second Brain, Empowered by Generative AI
 
-<div align="center">
-    <img src="./logo.png" alt="Quivr-logo" width="30%"  style="border-radius: 50%; padding-bottom: 20px"/>
-</div>
+![Quivr-logo](./logo.png){: width="30%" style="border-radius: 50%; padding-bottom: 20px"}
 
 [![Discord Follow](https://dcbadge.vercel.app/api/server/HUpRgp2HG8?style=flat)](https://discord.gg/HUpRgp2HG8)
 [![GitHub Repo stars](https://img.shields.io/github/stars/quivrhq/quivr?style=social)](https://github.com/quivrhq/quivr)
@@ -25,7 +23,7 @@ Quivr, your second brain, utilizes the power of GenerativeAI to be your personal
 
 ## Demo Highlights 🎥
 
-https://github.com/quivrhq/quivr/assets/19614572/a6463b73-76c7-4bc0-978d-70562dca71f5
+![Demo](https://github.com/quivrhq/quivr/assets/19614572/a6463b73-76c7-4bc0-978d-70562dca71f5)
 
 ## Getting Started 🚀
 
@@ -52,7 +50,6 @@ You can find the installation video [here](https://www.youtube.com/watch?v=cXBa6
   supabase -v # Check that the installation worked
   ```
 
-
 - **Step 1**: Clone the repository:
 
   ```bash
@@ -75,14 +72,16 @@ You can find the installation video [here](https://www.youtube.com/watch?v=cXBa6
 
   You just need to update the `OPENAI_API_KEY` variable in the `.env` file. You can get your API key [here](https://platform.openai.com/api-keys). You need to create an account first. And put your credit card information. Don't worry, you won't be charged unless you use the API. You can find more information about the pricing [here](https://openai.com/pricing/).
 
-  > Don't want to use OpenAI and want to use Ollama instead for a completely private experience? You can find the instructions [here](https://docs.quivr.app/developers/contribution/llm/ollama).
+  > Don't want to use OpenAI and want to use Ollama instead for a completely private experience? You can     find the instructions [here](https://docs.quivr.app/developers/contribution/llm/ollama).
 
 - **Step 4**: Launch the project
 
   ```bash
   supabase start
   ```
-  and then 
+
+  and then
+
   ```bash
   docker compose pull
   docker compose up
@@ -114,13 +113,10 @@ You can find the installation video [here](https://www.youtube.com/watch?v=cXBa6
   supabase migration up
   ```
 
-
 ## Contributors ✨
 
 Thanks go to these wonderful people:
-<a href="https://github.com/quivrhq/quivr/graphs/contributors">
-<img src="https://contrib.rocks/image?repo=quivrhq/quivr" />
-</a>
+[![Contributors](https://contrib.rocks/image?repo=quivrhq/quivr)](https://github.com/quivrhq/quivr/graphs/contributors)
 
 ## Contribute 🤝
 
@@ -137,13 +133,8 @@ Did you get a pull request? Open it, and we'll review it as soon as possible. Ch
 
 This project would not be possible without the support of our partners. Thank you for your support!
 
-
-<a href="https://ycombinator.com/">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Y_Combinator_logo.svg/1200px-Y_Combinator_logo.svg.png" alt="YCombinator" style="padding: 10px" width="70px">
-</a>
-<a href="https://www.theodo.fr/">
-  <img src="https://avatars.githubusercontent.com/u/332041?s=200&v=4" alt="Theodo" style="padding: 10px" width="70px">
-</a>
+![YCombinator](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Y_Combinator_logo.svg/1200px-Y_Combinator_logo.svg.png){: style="padding: 10px" width="70px"}
+![Theodo](https://avatars.githubusercontent.com/u/332041?s=200&v=4){: style="padding: 10px" width="70px"}
 
 ## License 📄
 
