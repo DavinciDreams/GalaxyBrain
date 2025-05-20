@@ -243,7 +243,7 @@ torch==2.2.2
 torchvision==0.17.2
 tornado==6.4; python_version >= '3.8'
 tqdm==4.66.2; python_version >= '3.7'
-transformers==4.40.1; python_full_version >= '3.8.0'
+transformers==4.50.0; python_full_version >= '3.8.0'
 types-requests==2.31.0.20240406; python_version >= '3.8'
 typing-extensions==4.11.0; python_version >= '3.8'
 typing-inspect==0.9.0
