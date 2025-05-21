@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { MicIcon, StopCircleIcon, Loader2Icon } from "lucide-react"
+import { MicIcon, StopCircleIcon, Loader2Icon, HelpCircleIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getSpeechRecognition } from "@/lib/speech-recognition"
 import { uploadVoiceRecording } from "@/app/actions/blob-actions"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
+import { findCommand } from "@/lib/voice-commands"
+import { createCommandRegistry } from "@/lib/command-registry"
+import { useRouter, usePathname } from "next/navigation"
 
 export function VoiceActionButton() {
   const [isListening, setIsListening] = useState(false)
@@ -19,11 +22,15 @@ export function VoiceActionButton() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [mode, setMode] = useState<"command" | "note">("command")
   const [isSpeechSupported, setIsSpeechSupported] = useState(false)
+  const [commandFeedback, setCommandFeedback] = useState<string | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
+  const pathname = usePathname()
+  const commands = createCommandRegistry(router)
 
   // Check if speech recognition is supported
   useEffect(() => {
@@ -44,9 +51,16 @@ export function VoiceActionButton() {
     }
   }, [audioUrl])
 
+  // Show help dialog
+  const showHelp = () => {
+    const event = new CustomEvent("show-voice-help")
+    window.dispatchEvent(event)
+  }
+
   const startListening = async () => {
     setShowDialog(true)
     setMode("command")
+    setCommandFeedback(null)
 
     try {
       // Request microphone access
@@ -158,22 +172,46 @@ export function VoiceActionButton() {
     }
   }
 
-  const processCommand = (command: string) => {
+  const processCommand = async (command: string) => {
     setIsProcessing(true)
+    setCommandFeedback(`Processing: "${command}"`)
 
-    // Simulate processing the command
-    setTimeout(() => {
+    // Try to match the command
+    const matchedCommand = findCommand(command, commands)
+
+    if (matchedCommand && matchedCommand.confidence > 0.7) {
+      setCommandFeedback(`Recognized command: "${matchedCommand.command.description}"`)
+
+      try {
+        // Execute the command
+        await matchedCommand.command.action(matchedCommand.params)
+
+        // Close dialog after processing
+        setTimeout(() => {
+          setShowDialog(false)
+          setTranscript("")
+          setCommandFeedback(null)
+          setIsProcessing(false)
+        }, 1500)
+      } catch (error) {
+        console.error("Error executing command:", error)
+        setCommandFeedback(`Error executing command: ${error instanceof Error ? error.message : "Unknown error"}`)
+        setIsProcessing(false)
+      }
+    } else if (
+      command.toLowerCase().includes("note") ||
+      command.toLowerCase().includes("write") ||
+      command.toLowerCase().includes("create")
+    ) {
+      // If it seems like a note creation command but didn't match exactly
+      setCommandFeedback("Creating a new note with your voice input")
+      setMode("note")
       setIsProcessing(false)
-
-      toast({
-        title: "Command recognized",
-        description: `"${command}"`,
-      })
-
-      // Close dialog after processing
-      setShowDialog(false)
-      setTranscript("")
-    }, 1500)
+    } else {
+      // No command matched
+      setCommandFeedback("Command not recognized. Try saying 'help' to see available commands.")
+      setIsProcessing(false)
+    }
   }
 
   const handleCreateNote = async () => {
@@ -239,11 +277,22 @@ export function VoiceActionButton() {
     setShowDialog(false)
     setTranscript("")
     setAudioUrl(null)
+    setCommandFeedback(null)
   }
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 rounded-full bg-background shadow-md"
+          onClick={showHelp}
+        >
+          <HelpCircleIcon className="h-5 w-5" />
+          <span className="sr-only">Voice Command Help</span>
+        </Button>
+
         <Button size="lg" className="h-14 w-14 rounded-full shadow-lg" onClick={startListening}>
           <MicIcon className="h-6 w-6" />
           <span className="sr-only">Voice Command</span>
@@ -282,6 +331,12 @@ export function VoiceActionButton() {
               </div>
             )}
 
+            {commandFeedback && !isListening && (
+              <div className={`rounded-md p-3 ${isProcessing ? "bg-primary/10" : "bg-muted"}`}>
+                <p className="text-sm">{commandFeedback}</p>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               {isListening ? (
                 <Button variant="destructive" onClick={stopListening}>
@@ -293,16 +348,18 @@ export function VoiceActionButton() {
                   <Button variant="outline" onClick={handleClose}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateNote} disabled={isProcessing}>
-                    {isProcessing ? (
-                      <>
-                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      "Create Note"
-                    )}
-                  </Button>
+                  {mode === "note" && (
+                    <Button onClick={handleCreateNote} disabled={isProcessing}>
+                      {isProcessing ? (
+                        <>
+                          <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Create Note"
+                      )}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
