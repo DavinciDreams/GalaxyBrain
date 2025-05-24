@@ -1,89 +1,119 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+"use client"
+
+import { useEffect, useState } from "react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+
+interface Activity {
+  id: string
+  user: {
+    name: string
+    avatar: string | null
+    initials: string
+  }
+  action: string
+  target: string
+  time: string
+}
 
 export function RecentActivity() {
-  // Mock data for demonstration
-  const activities = [
-    {
-      id: "1",
-      user: {
-        name: "You",
-        avatar: "/placeholder.svg?height=32&width=32",
-        initials: "YO",
-      },
-      action: "created a new note",
-      target: "Project Brainstorming",
-      time: "2 hours ago",
-    },
-    {
-      id: "2",
-      user: {
-        name: "Sarah K.",
-        avatar: "/placeholder.svg?height=32&width=32",
-        initials: "SK",
-      },
-      action: "commented on",
-      target: "Meeting Notes: Product Team",
-      time: "Yesterday",
-    },
-    {
-      id: "3",
-      user: {
-        name: "AI Assistant",
-        avatar: "/placeholder.svg?height=32&width=32",
-        initials: "AI",
-      },
-      action: "summarized",
-      target: "Research: AI Integration",
-      time: "3 days ago",
-    },
-    {
-      id: "4",
-      user: {
-        name: "You",
-        avatar: "/placeholder.svg?height=32&width=32",
-        initials: "YO",
-      },
-      action: "added to favorites",
-      target: "Project Brainstorming",
-      time: "3 days ago",
-    },
-    {
-      id: "5",
-      user: {
-        name: "Michael T.",
-        avatar: "/placeholder.svg?height=32&width=32",
-        initials: "MT",
-      },
-      action: "shared",
-      target: "UI Design Ideas",
-      time: "1 week ago",
-    },
-  ]
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    async function fetchActivities() {
+      try {
+        const response = await fetch("/api/activities")
+        if (!response.ok) {
+          throw new Error("Failed to fetch activities")
+        }
+        const data = await response.json()
+        setActivities(data)
+      } catch (error) {
+        console.error("Error fetching activities:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load recent activities",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchActivities()
+  }, [toast])
+
+  function formatTime(isoString: string): string {
+    const date = new Date(isoString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diffInSeconds < 60) {
+      return "just now"
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60)
+      return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600)
+      return `${hours} hour${hours !== 1 ? "s" : ""} ago`
+    } else if (diffInSeconds < 604800) {
+      const days = Math.floor(diffInSeconds / 86400)
+      return `${days} day${days !== 1 ? "s" : ""} ago`
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>Loading recent activities...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="mb-4 flex items-center gap-4 text-sm last:mb-0">
+              <div className="h-8 w-8 animate-pulse rounded-full bg-muted"></div>
+              <div className="space-y-1">
+                <div className="h-4 w-32 animate-pulse rounded bg-muted"></div>
+                <div className="h-3 w-24 animate-pulse rounded bg-muted"></div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
+        <CardDescription>Latest actions and updates</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {activities.map((activity) => (
-            <div key={activity.id} className="flex items-start gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={activity.user.avatar || "/placeholder.svg"} alt={activity.user.name} />
+        {activities.map((activity) => (
+          <div key={activity.id} className="mb-4 flex items-center gap-4 text-sm last:mb-0">
+            <Avatar className="h-8 w-8">
+              {activity.user.avatar ? (
+                <AvatarImage src={activity.user.avatar} alt={activity.user.name} />
+              ) : (
                 <AvatarFallback>{activity.user.initials}</AvatarFallback>
-              </Avatar>
-              <div className="space-y-1">
-                <p className="text-sm">
-                  <span className="font-medium">{activity.user.name}</span> {activity.action}{" "}
-                  <span className="font-medium">{activity.target}</span>
-                </p>
-                <p className="text-xs text-muted-foreground">{activity.time}</p>
-              </div>
+              )}
+            </Avatar>
+            <div>
+              <p>
+                <span className="font-medium">{activity.user.name}</span> {activity.action}{" "}
+                <span className="font-medium">{activity.target}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">{activity.time}</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </CardContent>
     </Card>
   )

@@ -10,69 +10,49 @@ export interface VoiceCommand {
   patterns: string[]
   description: string
   examples: string[]
-  category: "navigation" | "creation" | "editing" | "search" | "system"
-  action: (params: Record<string, string>) => Promise<void>
+  category: "navigation" | "action" | "creation"
+  action: () => Promise<void>
+}
+
+export interface PatternMatch {
+  match: boolean
+  confidence: number
 }
 
 // Helper function to match a command pattern against user input
-function matchPattern(
+export function matchPattern(
   pattern: string,
   input: string,
-): { match: boolean; params: Record<string, string>; confidence: number } {
-  // Convert both to lowercase for case-insensitive matching
-  const patternLower = pattern.toLowerCase()
-  const inputLower = input.toLowerCase()
+): PatternMatch {
+  const normalizedPattern = pattern.toLowerCase()
+  const normalizedInput = input.toLowerCase()
 
-  // Direct match
-  if (patternLower === inputLower) {
-    return { match: true, params: {}, confidence: 1.0 }
+  if (normalizedInput === normalizedPattern) {
+    return { match: true, confidence: 1 }
   }
 
-  // Check for pattern with parameters
-  if (pattern.includes("{") && pattern.includes("}")) {
-    const regex = new RegExp(
-      "^" +
-        pattern
-          .toLowerCase()
-          .replace(/\s+/g, "\\s+")
-          .replace(/{(\w+)}/g, "(.*?)") +
-        "$",
-    )
-
-    const paramNames = pattern.match(/{(\w+)}/g)?.map((p) => p.replace(/{|}/g, "")) || []
-    const match = inputLower.match(regex)
-
-    if (match) {
-      const params: Record<string, string> = {}
-      paramNames.forEach((name, index) => {
-        params[name] = match[index + 1]
-      })
-
-      // Calculate confidence based on how much of the pattern is fixed vs. parameters
-      const fixedTextLength = pattern.replace(/{(\w+)}/g, "").length
-      const confidence = fixedTextLength / pattern.length
-
-      return { match: true, params, confidence }
-    }
+  // Check for partial matches
+  if (normalizedInput.includes(normalizedPattern)) {
+    return { match: true, confidence: 0.9 }
   }
 
-  // Fuzzy match (simple implementation)
-  const words = patternLower.split(" ")
-  const inputWords = inputLower.split(" ")
-
+  // Calculate similarity score
+  const words = normalizedPattern.split(" ")
+  const inputWords = normalizedInput.split(" ")
   let matchedWords = 0
+
   words.forEach((word) => {
     if (inputWords.includes(word)) {
       matchedWords++
     }
   })
 
-  const confidence = matchedWords / words.length
-  if (confidence > 0.7) {
-    return { match: true, params: {}, confidence }
+  const similarity = matchedWords / words.length
+  if (similarity > 0.7) {
+    return { match: true, confidence: similarity }
   }
 
-  return { match: false, params: {}, confidence: 0 }
+  return { match: false, confidence: 0 }
 }
 
 // Function to find the best matching command for a given input
@@ -81,12 +61,12 @@ export function findCommand(input: string, commands: VoiceCommand[]): CommandMat
 
   for (const command of commands) {
     for (const pattern of command.patterns) {
-      const { match, params, confidence } = matchPattern(pattern, input)
+      const { match, confidence } = matchPattern(pattern, input)
 
       if (match && (!bestMatch || confidence > bestMatch.confidence)) {
         bestMatch = {
           command,
-          params,
+          params: {},
           confidence,
         }
       }

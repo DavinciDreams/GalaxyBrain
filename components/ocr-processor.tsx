@@ -32,53 +32,88 @@ export function OCRProcessor() {
     setImageUrl(fileData.url)
     setIsProcessing(true)
 
-    // Simulate OCR processing
-    setTimeout(() => {
-      // This is where you would call an actual OCR service
-      // For demo purposes, we're just simulating the result
-      const simulatedText = `Galaxy Brain App
-      
-Project Notes - May 17, 2025
+    try {
+      // Call Azure Computer Vision API for OCR
+      const response = await fetch("/api/ocr", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageUrl: fileData.url }),
+      })
 
-Key Features:
-• Voice-first interface with natural language processing
-• AI-powered note organization and summarization
-• Infinite canvas with multi-touch support
-• Cross-platform compatibility
-• End-to-end encryption
+      if (!response.ok) {
+        throw new Error("OCR processing failed")
+      }
 
-Next Steps:
-1. Finalize technology stack
-2. Create prototype for voice commands
-3. Test AI integration
-4. Design user interface mockups`
-
-      setExtractedText(simulatedText)
-      setIsProcessing(false)
+      const data = await response.json()
+      setExtractedText(data.text)
 
       toast({
         title: "OCR processing complete",
         description: "Text has been extracted from the image",
       })
-    }, 3000)
+    } catch (error) {
+      console.error("Error processing image:", error)
+      toast({
+        title: "OCR processing failed",
+        description: error instanceof Error ? error.message : "Failed to extract text from image",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(extractedText)
-    toast({
-      title: "Copied to clipboard",
-      description: "The extracted text has been copied to your clipboard",
-    })
+  const handleCopyText = async () => {
+    try {
+      await navigator.clipboard.writeText(extractedText)
+      toast({
+        title: "Copied to clipboard",
+        description: "The extracted text has been copied to your clipboard",
+      })
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy text to clipboard",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleCreateNote = () => {
-    toast({
-      title: "Note created",
-      description: "A new note has been created with the extracted text",
-    })
-    // Reset state
-    setExtractedText("")
-    setImageUrl("")
+  const handleCreateNote = async () => {
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: extractedText,
+          source: "ocr",
+          attachments: imageUrl ? [{ url: imageUrl }] : [],
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create note")
+      }
+
+      toast({
+        title: "Note created",
+        description: "A new note has been created with the extracted text",
+      })
+
+      // Reset state
+      setExtractedText("")
+      setImageUrl("")
+    } catch (error) {
+      toast({
+        title: "Failed to create note",
+        description: error instanceof Error ? error.message : "Could not create note",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

@@ -2,58 +2,117 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2Icon, PaperclipIcon, MicIcon } from "lucide-react"
-import { FileUpload } from "./file-upload"
-import { FileAttachment } from "./file-attachment"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-// Import the new NoteVoiceTranscription component
+import { Textarea } from "@/components/ui/textarea"
+import { FileAttachment } from "./file-attachment"
+import { FileUpload } from "./file-upload"
 import { NoteVoiceTranscription } from "./note-voice-transcription"
+import { useToast } from "@/hooks/use-toast"
+import { PaperclipIcon, MicIcon, Loader2Icon } from "lucide-react"
+
+interface Attachment {
+  url: string
+  filename: string
+  contentType: string
+  size: number
+}
 
 export function NoteEditor({ noteId }: { noteId: string }) {
   const [content, setContent] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [attachments, setAttachments] = useState<
-    Array<{
-      url: string
-      filename: string
-      contentType: string
-      size: number
-    }>
-  >([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
+  const { toast } = useToast()
 
-  // Simulate loading note content
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setContent(
-        "# Project Brainstorming\n\n## Voice-First Interface\n- Implement high-accuracy speech-to-text\n- Enable voice commands for all app functions\n- Support natural language processing\n- Include AI-powered text-to-speech\n\n## AI Integration\n- Automatic note summarization\n- Smart content suggestions\n- Context-aware organization\n- Real-time translation\n\n## Canvas Features\n- Infinite scrolling canvas\n- Support for stylus input\n- Multi-touch gestures\n- Handwriting recognition",
-      )
+    async function fetchNote() {
+      try {
+        const response = await fetch(`/api/notes/${noteId}`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch note")
+        }
+        const data = await response.json()
+        setContent(data.content)
+        setAttachments(data.attachments)
+      } catch (error) {
+        console.error("Error fetching note:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load note content",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-      // Simulate loading attachments
-      setAttachments([
-        {
-          url: "https://placeholder.svg?height=200&width=300",
-          filename: "concept-diagram.png",
-          contentType: "image/png",
-          size: 1024 * 1024 * 2.5, // 2.5MB
-        },
-      ])
+    if (noteId) {
+      fetchNote()
+    }
+  }, [noteId, toast])
 
-      setIsLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [noteId])
+  const handleSave = async () => {
+    if (isSaving) return
 
-  const handleSave = () => {
     setIsSaving(true)
-    // Simulate saving
-    setTimeout(() => {
+    try {
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content,
+          attachments,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save note")
+      }
+
+      toast({
+        title: "Saved",
+        description: "Your note has been saved",
+      })
+    } catch (error) {
+      console.error("Error saving note:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save note",
+        variant: "destructive",
+      })
+    } finally {
       setIsSaving(false)
-    }, 1000)
+    }
+  }
+
+  const handleAttachmentDelete = async (url: string) => {
+    try {
+      const response = await fetch(`/api/attachments`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete attachment")
+      }
+
+      setAttachments((prev) => prev.filter((a) => a.url !== url))
+    } catch (error) {
+      console.error("Error deleting attachment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete attachment",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleFileUploadComplete = (fileData: {
@@ -82,10 +141,6 @@ export function NoteEditor({ noteId }: { noteId: string }) {
       },
     ])
     setShowVoiceRecorder(false)
-  }
-
-  const handleDeleteAttachment = (url: string) => {
-    setAttachments((prev) => prev.filter((attachment) => attachment.url !== url))
   }
 
   if (isLoading) {
@@ -157,7 +212,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                 <FileAttachment
                   key={index}
                   file={attachment}
-                  onDelete={() => handleDeleteAttachment(attachment.url)}
+                  onDelete={() => handleAttachmentDelete(attachment.url)}
                   showPreview={true}
                 />
               ))

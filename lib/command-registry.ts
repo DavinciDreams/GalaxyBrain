@@ -1,11 +1,17 @@
 import type { VoiceCommand } from "./voice-commands"
 import { toast } from "@/hooks/use-toast"
+import { matchPattern } from "./voice-commands"
 
 // We'll need these imports for navigation
 import type { useRouter } from "next/navigation"
 
+interface CommandRegistry {
+  commands: VoiceCommand[]
+  findCommand: (input: string) => VoiceCommand | null
+}
+
 // Command registry factory - we need to create it with router access
-export function createCommandRegistry(router: ReturnType<typeof useRouter>) {
+export function createCommandRegistry(router: ReturnType<typeof useRouter>): CommandRegistry {
   // Define all available commands
   const commands: VoiceCommand[] = [
     // Navigation commands
@@ -378,5 +384,23 @@ export function createCommandRegistry(router: ReturnType<typeof useRouter>) {
     },
   ]
 
-  return commands
+  return {
+    commands,
+    findCommand: (input: string) => {
+      let bestMatch: VoiceCommand | null = null
+      let highestConfidence = 0
+
+      for (const command of commands) {
+        for (const pattern of command.patterns) {
+          const { match, confidence } = matchPattern(pattern, input.toLowerCase())
+          if (match && confidence > highestConfidence) {
+            highestConfidence = confidence
+            bestMatch = command
+          }
+        }
+      }
+
+      return bestMatch
+    },
+  }
 }
